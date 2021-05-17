@@ -1,0 +1,129 @@
+*&---------------------------------------------------------------------*
+*& Report  ZIDE_PAV_R_001
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+REPORT zide_pav_r_001.
+TABLES: zide_dba_t_perr.
+
+DATA:    gv_ad              TYPE zide_dba_t_perr-pers_ad,
+         gv_soyad           TYPE zide_dba_t_perr-pers_soyad,
+         gv_maas            TYPE zide_dba_t_perr-pers_maas,
+         gv_departman       TYPE zide_dba_t_perr-pers_d,
+         gv_tc              TYPE zide_dba_t_perr-pers_tc,
+         gv_avans           TYPE zide_pav_t-pers_avans,
+         gv_adate           TYPE zide_pav_t-pers_adate,
+         gv_cbox            TYPE zide_dba_t_perr-pers_cbox,
+         gv_text            TYPE char200,
+         gs_log             TYPE zide_pav_t,
+         gt_persk_t         TYPE TABLE OF zide_pav_t,
+         ok_code            TYPE sy-ucomm,
+         gs_zide_dba_t_perr TYPE zide_dba_t_perr,
+         gt_zide_dba_t_perr TYPE TABLE OF zide_dba_t_perr.
+
+
+CLEAR: gv_cbox.
+gv_cbox = abap_false.
+
+START-OF-SELECTION.
+  CALL SCREEN 0001.
+
+
+
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0001  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_0001 OUTPUT.
+  SET PF-STATUS 'STATUS_0001'.
+*  SET TITLEBAR ''.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0001  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+
+MODULE cancel INPUT.
+  LEAVE PROGRAM.
+
+ENDMODULE.
+
+MODULE user_command_0001 INPUT.
+  ok_code = sy-ucomm.
+  CASE ok_code.
+    WHEN '&CLEAR'.
+      PERFORM clear_data.
+
+    WHEN '&SAVE'.
+      PERFORM save_data.
+  ENDCASE.  .
+ENDMODULE.
+
+
+*&---------------------------------------------------------------------*
+*&      Form  CLEAR_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM clear_data .
+
+  CLEAR:   gv_tc,
+   gv_avans,
+  gv_adate,
+  gv_cbox.
+  CONCATENATE sy-ucomm
+  'Temizleme Başarılı' INTO gv_text SEPARATED BY space.
+  MESSAGE gv_text TYPE 'I' DISPLAY LIKE 'S'.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&      Form  SAVE_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+
+FORM save_data .
+
+  DATA: lv_msg  TYPE c LENGTH 200,
+        lv_maas TYPE c LENGTH 10.
+
+  CLEAR: gs_zide_dba_t_perr, lv_msg, lv_maas.
+  SELECT SINGLE * FROM zide_dba_t_perr
+    INTO  gs_zide_dba_t_perr
+     WHERE pers_tc EQ gv_tc.
+
+  IF sy-subrc NE 0.
+    MESSAGE 'Personel bulunamadı!' TYPE 'E'.
+  ENDIF.
+
+
+  CLEAR:gs_log.
+  gs_log-pers_ad = gs_zide_dba_t_perr-pers_ad.
+  gs_log-pers_soyad = gs_zide_dba_t_perr-pers_soyad.
+  gs_log-pers_tc = gv_tc.
+  gs_log-pers_d = gs_zide_dba_t_perr-pers_d.
+  gs_log-pers_maas = gs_zide_dba_t_perr-pers_maas.
+  gs_log-pers_avans = gv_avans.
+  gs_log-pers_adate = gv_adate.
+  gs_log-pers_cbox = gv_cbox.
+
+  MODIFY zide_pav_t FROM gs_log.
+  IF sy-subrc EQ 0.
+    lv_maas = gs_log-pers_maas.
+    CONDENSE lv_maas.
+    CONCATENATE gs_log-pers_ad gs_log-pers_soyad 'personelin' lv_maas
+    'tutarındaki avans kaydı başarılı şekilde atılmıştır!' INTO lv_msg SEPARATED BY space.
+    MESSAGE lv_msg TYPE 'I' DISPLAY LIKE 'S'.
+  ENDIF.
+
+ENDFORM.
